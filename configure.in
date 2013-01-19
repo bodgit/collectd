@@ -4431,28 +4431,28 @@ PKG_CHECK_MODULES([LIBNOTIFY], [libnotify],
 			 with_libnotify="no ($LIBNOTIFY_PKG_ERRORS)"
 		 fi])
 
-# pkg-config --exists 'libapr-1' {{{
+# pkg-config --exists 'apr-1' {{{
 with_libapr1="no (pkg-config isn't available)"
 with_libapr1_cflags=""
 with_libapr1_ldflags=""
 if test "x$PKG_CONFIG" != "x"
 then
-	pkg-config --exists 'libapr-1' 2>/dev/null
+	pkg-config --exists 'apr-1' 2>/dev/null
 	if test "$?" = "0"
 	then
 		with_libapr1="yes"
 	else
-		with_libapr1="no (pkg-config doesn't know libapr-1)"
+		with_libapr1="no (pkg-config doesn't know apr-1)"
 	fi
 fi
 if test "x$with_libapr1" = "xyes"
 then
-	with_libapr1_cflags="`pkg-config --cflags libapr-1`"
+	with_libapr1_cflags="`pkg-config --cflags apr-1`"
 	if test $? -ne 0
 	then
 		with_libapr1="no"
 	fi
-	with_libapr1_ldflags="`pkg-config --libs libapr-1`"
+	with_libapr1_ldflags="`pkg-config --libs apr-1`"
 	if test $? -ne 0
 	then
 		with_libapr1="no"
@@ -4476,9 +4476,9 @@ then
 	CFLAGS="$CFLAGS $with_libapr1_cflags"
 	LDFLAGS="$LDFLAGS $with_libapr1_ldflags"
 
-	AC_CHECK_LIB(apr-1, apr_pool_create,
+	AC_CHECK_LIB(apr-1, apr_initialize,
 		     [with_libapr1="yes"],
-		     [with_libapr1="no (symbol apr_pool_create not found)"])
+		     [with_libapr1="no (symbol apr_initialize not found)"])
 
 	CFLAGS="$SAVE_CFLAGS"
 	LDFLAGS="$SAVE_LDFLAGS"
@@ -4491,6 +4491,37 @@ if test "x$with_libapr1" = "xyes"; then
 	AC_SUBST(BUILD_WITH_LIBAPR1_LIBS)
 fi
 # }}}
+with_apxs="no (apxs isn't available)"
+with_apxs_cflags=""
+APXS="$APXS"
+AC_PATH_PROG(APXS, apxs, [], [])
+if test "x$APXS" != "x"
+then
+	with_apxs="yes"
+fi
+if test "x$with_apxs" = "xyes"
+then
+	with_apxs_cflags="-I`apxs -q INCLUDEDIR`"
+	if test $? -ne 0
+	then
+		with_apxs="no"
+	fi
+fi
+if test "x$with_apxs" = "xyes" && test "x$with_libapr1" = "xyes"
+then
+	SAVE_CPPFLAGS="$CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS $with_apxs_cflags $with_libapr1_cflags"
+
+	AC_CHECK_HEADERS(httpd.h, [],
+		      [with_apxs="no (httpd.h not found)"])
+
+	CPPFLAGS="$SAVE_CPPFLAGS"
+fi
+dnl Add the right compiler flags and libraries.
+if test "x$with_apxs" = "xyes"; then
+	BUILD_WITH_APXS_CFLAGS="$with_apxs_cflags"
+	AC_SUBST(BUILD_WITH_APXS_CFLAGS)
+fi
 
 # Check for enabled/disabled features
 #
@@ -4618,6 +4649,7 @@ AC_COLLECTD([getifaddrs],[enable],  [feature], [getifaddrs under Linux])
 dependency_warning="no"
 dependency_error="no"
 
+plugin_apache_scoreboard="no"
 plugin_ascent="no"
 plugin_battery="no"
 plugin_bind="no"
@@ -4908,6 +4940,10 @@ if test "x$have_getutxent" = "xyes"
 then
 	plugin_users="yes"
 fi
+if test "x$with_libapr1" = "xyes" && test "x$with_apxs" = "xyes"
+then
+	plugin_apache_scoreboard="yes"
+fi
 
 m4_divert_once([HELP_ENABLE], [
 collectd plugins:])
@@ -4933,6 +4969,7 @@ m4_divert_once([HELP_ENABLE], [])
 AC_PLUGIN([aggregation], [yes],                [Aggregation plugin])
 AC_PLUGIN([amqp],        [$with_librabbitmq],  [AMQP output plugin])
 AC_PLUGIN([apache],      [$with_libcurl],      [Apache httpd statistics])
+AC_PLUGIN([apache_scoreboard], [$plugin_apache_scoreboard], [Apache httpd statistics])
 AC_PLUGIN([apcups],      [yes],                [Statistics of UPSes by APC])
 AC_PLUGIN([apple_sensors], [$with_libiokit],   [Apple's hardware sensors])
 AC_PLUGIN([ascent],      [$plugin_ascent],     [AscentEmu player statistics])
@@ -5214,6 +5251,7 @@ cat <<EOF;
 
 Configuration:
   Libraries:
+    libapr  . . . . . . . $with_libapr1
     libcurl . . . . . . . $with_libcurl
     libdbi  . . . . . . . $with_libdbi
     libcredis . . . . . . $with_libcredis
@@ -5268,6 +5306,7 @@ Configuration:
     aggregation . . . . . $enable_aggregation
     amqp    . . . . . . . $enable_amqp
     apache  . . . . . . . $enable_apache
+    apache_scoreboard . . $enable_apache_scoreboard
     apcups  . . . . . . . $enable_apcups
     apple_sensors . . . . $enable_apple_sensors
     ascent  . . . . . . . $enable_ascent
