@@ -171,6 +171,17 @@ endif
 collectd_DEPENDENCIES += apache.la
 endif
 
+if BUILD_PLUGIN_APACHE_SCOREBOARD
+pkglib_LTLIBRARIES += apache_scoreboard.la
+apache_scoreboard_la_SOURCES = apache_scoreboard.c
+apache_scoreboard_la_LDFLAGS = -module -avoid-version
+apache_scoreboard_la_CFLAGS = $(AM_CFLAGS) \
+		$(BUILD_WITH_LIBAPR1_CFLAGS) $(BUILD_WITH_APXS_CFLAGS)
+apache_scoreboard_la_LIBADD = $(BUILD_WITH_LIBAPR1_LIBS)
+collectd_LDADD += "-dlopen" apache_scoreboard.la
+collectd_DEPENDENCIES += apache_scoreboard.la
+endif
+
 if BUILD_PLUGIN_APCUPS
 pkglib_LTLIBRARIES += apcups.la
 apcups_la_SOURCES = apcups.c
