@@ -4431,6 +4431,67 @@ PKG_CHECK_MODULES([LIBNOTIFY], [libnotify],
 			 with_libnotify="no ($LIBNOTIFY_PKG_ERRORS)"
 		 fi])
 
+# pkg-config --exists 'libapr-1' {{{
+with_libapr1="no (pkg-config isn't available)"
+with_libapr1_cflags=""
+with_libapr1_ldflags=""
+if test "x$PKG_CONFIG" != "x"
+then
+	pkg-config --exists 'libapr-1' 2>/dev/null
+	if test "$?" = "0"
+	then
+		with_libapr1="yes"
+	else
+		with_libapr1="no (pkg-config doesn't know libapr-1)"
+	fi
+fi
+if test "x$with_libapr1" = "xyes"
+then
+	with_libapr1_cflags="`pkg-config --cflags libapr-1`"
+	if test $? -ne 0
+	then
+		with_libapr1="no"
+	fi
+	with_libapr1_ldflags="`pkg-config --libs libapr-1`"
+	if test $? -ne 0
+	then
+		with_libapr1="no"
+	fi
+fi
+if test "x$with_libapr1" = "xyes"
+then
+	SAVE_CPPFLAGS="$CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS $with_libapr1_cflags"
+
+	AC_CHECK_HEADERS(apr.h, [],
+		      [with_libapr1="no (apr.h not found)"])
+
+	CPPFLAGS="$SAVE_CPPFLAGS"
+fi
+if test "x$with_libapr1" = "xyes"
+then
+	SAVE_CFLAGS="$CFLAGS"
+	SAVE_LDFLAGS="$LDFLAGS"
+
+	CFLAGS="$CFLAGS $with_libapr1_cflags"
+	LDFLAGS="$LDFLAGS $with_libapr1_ldflags"
+
+	AC_CHECK_LIB(apr-1, apr_pool_create,
+		     [with_libapr1="yes"],
+		     [with_libapr1="no (symbol apr_pool_create not found)"])
+
+	CFLAGS="$SAVE_CFLAGS"
+	LDFLAGS="$SAVE_LDFLAGS"
+fi
+dnl Add the right compiler flags and libraries.
+if test "x$with_libapr1" = "xyes"; then
+	BUILD_WITH_LIBAPR1_CFLAGS="$with_libapr1_cflags"
+	BUILD_WITH_LIBAPR1_LIBS="$with_libapr1_ldflags"
+	AC_SUBST(BUILD_WITH_LIBAPR1_CFLAGS)
+	AC_SUBST(BUILD_WITH_LIBAPR1_LIBS)
+fi
+# }}}
+
 # Check for enabled/disabled features
 #
 
